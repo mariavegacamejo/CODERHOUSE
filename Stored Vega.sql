@@ -281,7 +281,7 @@ $$
 DELIMITER ;
 
 -- -------------------------------------------
--- Verificación de las funciones
+-- Verificación de los procedures
 -- -------------------------------------------
 
 call ordenar_tabla("cliente", "nombre", FALSE);
