@@ -292,3 +292,144 @@ call insertar_registro(7,"Juana Lopez",36834537,093447394);
 call insertar_registro(8,"Lucia Gomez",23345451,099883743);
 
 -- -------------------------------------------
+-- Creación de Triggers
+-- -------------------------------------------
+
+-- ------------Tabla LOG CHANGE PRICE-------------
+CREATE TABLE IF NOT EXISTS log_change_price(
+	log_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+		usuario VARCHAR(255),
+		fecha DATE,
+		hora TIME,
+		precio_viejo INT,
+		precio_nuevo INT)
+	ENGINE = InnoDB;
+
+-- -------------Trigger CAMBIO PRECIO--------------
+-- Triger para controlar la modificación de los precios del menú
+DROP TRIGGER IF EXISTS after_change_price;
+DELIMITER $$
+CREATE TRIGGER after_change_price
+AFTER UPDATE
+ON Menu
+FOR EACH ROW
+BEGIN
+	IF old.precio <> new.precio THEN
+		INSERT INTO log_change_price
+			VALUES(null,user(),curdate(),curtime(),old.precio,new.precio);
+	END IF;
+END
+$$
+
+DELIMITER ;
+
+-- --------------Verificación trigger---------------
+-- Se realiza una actualización de un precio para ver que quede en el log
+UPDATE Menu
+SET
+	precio = 550
+WHERE
+	id_plato = 351;
+
+-- Se realiza una actualización de otro campo para comprobar que no quede en el log
+UPDATE Menu
+SET
+	porciones = 10
+WHERE
+	id_plato = 351;
+
+
+-- ---------Trigger ACTUALIZACIÓN PORCIONES----------
+-- Triger para actualizar las porciones disponibles en Menu
+DROP TRIGGER IF EXISTS actualizacion_porciones;
+DELIMITER $$
+CREATE TRIGGER actualizacion_porciones
+BEFORE INSERT
+ON Detalle
+FOR EACH ROW
+BEGIN
+	DECLARE porciones_viejas INT;
+	SET porciones_viejas = (
+		SELECT porciones 
+		FROM Menu
+		WHERE id_plato = new.id_plato);
+	UPDATE Menu
+	SET
+		porciones = porciones_viejas - new.cantidad
+	WHERE
+		id_plato = new.id_plato;
+END
+$$
+
+DELIMITER ;
+
+-- --------------Verificación trigger---------------
+-- Se realiza una inserción en la tabla Detalle para verificar que se actualizan las porciones.
+INSERT INTO Detalle (id_detalle,id_pedido,id_plato,cantidad)
+VALUES (44,51,351,2);
+
+
+-- ------------Tabla LOG INSERT PEDIDO-------------
+CREATE TABLE IF NOT EXISTS log_insert_pedido(
+	log_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+		usuario VARCHAR(255),
+		fecha DATE,
+		hora TIME,
+		nuevo_registro VARCHAR (500))
+	ENGINE = InnoDB;
+
+-- -------------Trigger NUEVO PEDIDO--------------
+-- Triger para controlar la creación de nuevos pedidos
+DROP TRIGGER IF EXISTS after_insert_pedido;
+DELIMITER $$
+CREATE TRIGGER after_insert_pedido
+AFTER INSERT
+ON Pedido
+FOR EACH ROW
+BEGIN
+	INSERT INTO log_insert_pedido
+		VALUES(null,user(),curdate(),curtime(),concat_ws('_',new.id_pedido,new.mesa,new.fecha,new.id_cliente,new.id_mozo,new.personas));
+END
+$$
+
+DELIMITER ;
+
+-- --------------Verificación trigger---------------
+-- Se realiza una inserción de un pedido para ver que quede en el log
+INSERT INTO Pedido (id_pedido,mesa,fecha,id_cliente,id_mozo,personas,comentarios)
+VALUES (66,3,'2022-04-10 21:10:00',3,33,3,'muy bueno');
+
+
+
+-- ------------Tabla LOG DELETE PEDIDO-------------
+CREATE TABLE IF NOT EXISTS log_delete_pedido(
+	log_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+		usuario VARCHAR(255),
+		fecha DATE,
+		hora TIME,
+		nuevo_registro VARCHAR (500))
+	ENGINE = InnoDB;
+
+-- -------------Trigger ELIMINAR PEDIDO--------------
+-- Triger para controlar la eliminación de pedidos
+DROP TRIGGER IF EXISTS before_delete_pedido;
+DELIMITER $$
+CREATE TRIGGER before_delete_pedido
+BEFORE DELETE
+ON Pedido
+FOR EACH ROW
+BEGIN
+	INSERT INTO log_delete_pedido
+		VALUES(null,user(),curdate(),curtime(),concat_ws('_',old.id_pedido,old.mesa,old.fecha,old.id_cliente,old.id_mozo,old.personas,old.comentarios));
+END
+$$
+
+DELIMITER ;
+
+-- --------------Verificación trigger---------------
+-- Se elimina un pedido para ver que quede en el log
+DELETE
+FROM Pedido
+WHERE id_pedido = 66; 
+
+-- -------------------------------------------------
