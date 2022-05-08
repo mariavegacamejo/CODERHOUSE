@@ -446,7 +446,7 @@ GRANT SELECT ON *.* TO user_lectura@localhost;
 -- Se verifican los permisos otorgados al usuario
 SELECT * FROM mysql.user WHERE user LIKE 'user_lectura%';
 
--- ------------Creación de usuario lectura-------------
+-- ------------Creación de usuario edición-------------
 
 -- Se crea un usario en el dominio local
 CREATE USER user_edicion@localhost;
